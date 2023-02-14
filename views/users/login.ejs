@@ -1,21 +1,55 @@
-<%- include('../../views/partials/header') %>    
+<!-- BRING IN HEADER PARTIAL -->
+    <%- include('../../views/partials/header') %>    
 
-        <div class="regContainer">
-            <div class="regHeading">
-                <h1>inVent Login</h1>
-            </div>
-            <div class="registration">
-                <form action="/users/login" method="POST">
-                    Username: <input type="text" name="username" /><br />
-                    Password: <input type="password" name="password" /><br />
-                    <input type="submit" value="Login" />
-                </form>
-            </div>
-            <div>
-                <form action="/users/new" method="GET">
-                    <input type="submit" value="Register"/>
-                </form>
-            </div>
+<!-- FORM VALIDATION -->
+    <%        
+        const validateForm = (form) => {
+            <!-- FORM SAMPLE -- document.forms["item-edit-form"] -->
+           
+            if( form.name.value == "" ) {
+               alert( "Please provide an item name!" );
+               form.name.focus();
+               return false;
+            }
+            if( form.type.value == "" ) {
+               alert( "Please provide an item type!" );
+               form.type.focus();
+               return false;
+            }
+            if( form.count.value == "" || isNaN( form.count.value )) {
+               
+               alert("Please provide a numerical count for the item");
+               form.count.focus();
+               return false;
+            }
+            return( true );
+         }
+      
+    %>
+
+<!-- START LOGIN FORM CONTAINER -->
+    <div class="regContainer">
+        <div class="regHeading">
+            <h1>inVent Login</h1>
         </div>
+<!-- LOGIN FORM -->
+        <div class="registration">
+            <form name="registration-form" action="/users/login" method="POST">
+            <!-- <form name="registration-form" action="/users/login" onsubmit="return validateForm()" method="POST"> -->
+                <input type="hidden" name="csrf_token" value="token-generated-here" />
+                Username: <input label="username" type="text" name="username" required /><br />
+                Password: <input label="password" type="password" name="password" required /><br />
+                <input label="login" type="submit" value="Login" />
+            </form>
+        </div>
+        <div>
+<!-- REGISTER BUTTON -->
+            <form action="/users/new" method="GET">
+                <input label="register" type="submit" value="Register"/>
+            </form>
+        </div>
+    </div>
+<!-- END LOGIN FORM CONTAINER -->
 
-<%- include('../../views/partials/footer') %>
+<!-- BRING IN FOOTER PARTIAL -->
+    <%- include('../../views/partials/footer') %>

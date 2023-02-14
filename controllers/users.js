@@ -1,59 +1,73 @@
 // REQUIRED MODULES
-    const express = require("express");
-    const router = express.Router();
-    const User = require('../models/user');
-    const bcrypt = require('bcrypt');
-    const SALT_ROUNDS = 10;  //  SETS AMOUNT OF PASSES THROUGH SALTING ALGORITHM
+const express = require('express');
+const router = express.Router();
+const { createUser, pool } = require('../models/user');
+const bcrypt = require('bcrypt');
+const SALT_ROUNDS = 10;
 
-// DEFINE ROUTES
-    router.get("/new", (req, res) => {
-        res.render("users/new");
-    });
+// NEW USER FORM
+router.get('/new', (req, res) => {
+  res.render('users/new');
+});
 
-    router.post("/signup", (req, res) => {
-        req.body.password = bcrypt.hashSync(req.body.password, bcrypt.genSaltSync(SALT_ROUNDS));  // FETCHES ENTERED PASSWORD FROM REQ.BODY AND PROCESSES THROUGH HASHING AND SALTING ALGORITHMS
-        User.create(req.body, function(error, newUser) { // ADDS NEW USER TO DB
-            // console.log(newUser);
-            res.redirect('/login');
-        });
-    });
+// CREATE NEW USER
+router.post('/signup', async (req, res) => {
+  const { username, password, email } = req.body;
 
-    router.get('/login', (req, res) => {
-        res.render('users/login');
-    }); 
+  try {
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    await createUser(username, hashedPassword, email);
+    res.redirect('/login');
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
-    router.post('/login', (req, res) => {
-        User.findOne({
-            username: req.body.username // FETCHES USERNAME FROM REQ.BODY AND ASSIGNS TO VARIABLE
-        }, function (error, foundUser) {
-            if (foundUser === null) {  // HANDLES CHECK ON USER EXISTANCE
-                res.redirect('users/signin');
-            } else {  // CHECKS PASSWORD MATCH
-                const doesPasswordMatch = bcrypt.compareSync(req.body.password, foundUser.password); // COMPARES PASSWORD IN DB WITH ENTERED PASSWORD FRIN REQ.BODY
-                if (doesPasswordMatch) {
-                    req.session.userId = foundUser._id; // CREATES USER SESSION
-                    // console.log(req.session) // we can also log out the session to see the results
-                    res.redirect('/items');
-                } else {
-                    res.redirect('/users/signin');  // REDIRECTS THEM TO SIGNIN IF THEIR PASSWORD DOES NOT MATCH
-                }
-            }
-        });
-    });
+// LOGIN FORM
+router.get('/login', (req, res) => {
+  res.render('users/login');
+});
 
-// // DEFINE PROTECTED ROUTES
-//     router.get('/dashboard', (req, res) => { 
-//         if(req.session.userId) {
-//             res.render('items/index');
-//         } else {
-//             res.redirect('/users/signin');
-//         };
-//     });
+// LOGIN USER
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body;
 
-    router.get('/users/logout', (req, res) => {
-        req.session.destroy();
-        res.redirect('/');
-    });
+  try {
+    const [rows] = await pool.execute('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
 
-// EXPORTS
-    module.exports = router;
+    if (rows.length === 0) {
+      res.redirect('/users/login');
+    } else {
+      const { id, username, password: hashedPassword, email } = rows[0];
+      const doesPasswordMatch = await bcrypt.compare(password, hashedPassword);
+
+      if (doesPasswordMatch) {
+        req.session.userId = id;
+        res.redirect('/items');
+      } else {
+        res.redirect('/users/login');
+      }
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// DASHBOARD
+router.get('/dashboard', (req, res) => {
+  if (req.session.userId) {
+    res.render('items/index');
+  } else {
+    res.redirect('/users/login');
+  }
+});
+
+// LOGOUT
+router.get('/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/');
+});
+
+module.exports = router;
