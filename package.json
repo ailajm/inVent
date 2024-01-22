@@ -23,7 +23,7 @@
     "express-session": "^1.17.1",
     "method-override": "^3.0.0",
     "morgan": "^1.10.0",
-    "mysql2": "^3.6.5",
+    "mysql2": "^3.7.1",
     "node-sass": "^9.0.0",
     "nodemon": "^3.0.2",
     "npm": "^10.2.5",
